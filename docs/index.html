@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>日文假名 → 譯音 轉換器</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#111827">
+  <style>
+    :root { --bg:#0b1220; --card:#111827; --muted:#9ca3af; --pri:#60a5fa; --accent:#22d3ee; --ok:#10b981; --warn:#f59e0b; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin:0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;
+      color: #e5e7eb; background: radial-gradient(1200px 800px at 10% -10%, #1f2937 10%, var(--bg) 60%) no-repeat;
+    }
+    header { padding: 18px 20px; display:flex; gap:14px; align-items:center; justify-content:space-between; border-bottom:1px solid #1f2937; background:#0b1422aa; backdrop-filter: blur(6px); position: sticky; top: 0; z-index: 10; }
+    header h1 { margin:0; font-size:18px; letter-spacing:.3px; font-weight:700; }
+    .badge { font-size:12px; padding:2px 8px; border-radius:14px; border:1px solid #374151; color:#d1d5db; }
+    main { padding: 20px; max-width: 1100px; margin: 0 auto; }
+    .grid { display:grid; grid-template-columns: 1fr; gap:16px; }
+    @media (min-width: 1024px){ .grid { grid-template-columns: 1fr 1fr; } }
+    .card {
+      background: linear-gradient(180deg, #111827 0, #0f172a 100%);
+      border:1px solid #1f2937; border-radius:20px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .card h2 { margin:0 0 10px 0; font-size:14px; color:#cbd5e1; letter-spacing:.5px; }
+    textarea { width:100%; min-height:260px; resize:vertical; padding:12px; border-radius:14px; border:1px solid #374151; background:#0b1220; color:#e5e7eb; font-size:15px; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+    .btn {
+      appearance:none; border:1px solid #334155; padding:10px 14px; border-radius:12px; background:#0e1726; color:#e5e7eb; cursor:pointer;
+      transition: .15s transform ease, .2s box-shadow ease, .2s background ease;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(0,0,0,.25); }
+    .btn.primary { border-color:#2563eb; background: linear-gradient(180deg, #2563eb, #1d4ed8); }
+    .btn.ghost { background: transparent; }
+    .btn.small { padding:6px 10px; border-radius:10px; font-size:12px; }
+    label.switch { display:flex; align-items:center; gap:8px; font-size:13px; color:#c7d2fe; }
+    input[type="checkbox"] { width:18px; height:18px; accent-color:#60a5fa; }
+    select, input[type="file"] {
+      padding:9px 12px; border-radius:10px; border:1px solid #374151; background:#0b1220; color:#e5e7eb;
+    }
+    .meta { color: var(--muted); font-size:12px; }
+    .stat { display:flex; gap:10px; flex-wrap:wrap; }
+    .stat .pill { padding:6px 10px; font-size:12px; border-radius:999px; border:1px solid #334155; background:#0e1726; }
+    .pill.ok{ border-color:#065f46; color:#34d399; }
+    .pill.warn{ border-color:#7c2d12; color:#fbbf24; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .footer { margin-top:16px; color:#93c5fd; font-size:12px; }
+    .dropzone { border:1px dashed #334155; border-radius:12px; padding:12px; text-align:center; color:#94a3b8; }
+    .kbd { padding:2px 6px; border-radius:6px; border:1px solid #374151; background:#0b1220; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>日文假名 → 譯音 轉換器 <span class="badge">PWA</span></h1>
+    <div class="row">
+      <button class="btn small ghost" id="btnInstall" hidden>安裝到電腦/手機</button>
+      <a class="btn small ghost" href="https://github.com/" target="_blank" rel="noreferrer">說明</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <section class="card">
+        <h2>輸入（日文平假名／片假名）</h2>
+        <textarea id="input" placeholder="貼上或輸入假名文字… 例：きょうはあめです。"></textarea>
+        <div class="row" style="justify-content: space-between; margin-top:10px;">
+          <div class="row">
+            <label class="switch"><input type="checkbox" id="normalizeKata" checked> 片假名自動轉平假名</label>
+            <label class="switch"><input type="checkbox" id="keepUnknown" checked> 無對應字保留原樣</label>
+            <label class="switch"><input type="checkbox" id="stripBracket"> 移除譯音前導符號「[」</label>
+          </div>
+          <div class="row">
+            <button class="btn" id="btnClear">清空</button>
+            <button class="btn primary" id="btnConvert">轉換</button>
+          </div>
+        </div>
+        <div class="meta">提示：輸入框支援 <span class="kbd">Ctrl/⌘</span> + <span class="kbd">Enter</span> 立即轉換。</div>
+      </section>
+
+      <section class="card">
+        <h2>輸出（譯音）</h2>
+        <textarea id="output" placeholder="這裡會顯示轉換結果…" readonly></textarea>
+        <div class="row" style="justify-content: space-between; margin-top:10px;">
+          <div class="row">
+            <label>多譯音策略：</label>
+            <select id="chooseMode">
+              <option value="first">僅主譯音（取第一個）</option>
+              <option value="all">全部（以 / 分隔）</option>
+            </select>
+          </div>
+          <div class="row">
+            <button class="btn" id="btnCopy">複製</button>
+            <button class="btn" id="btnDownloadTxt">下載 TXT</button>
+          </div>
+        </div>
+        <div class="stat" id="stats" style="margin-top:12px;"></div>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:16px;">
+      <h2>對照表管理</h2>
+      <div class="row" style="justify-content: space-between;">
+        <div class="row">
+          <button class="btn" id="btnExport">匯出目前對照表（JSON）</button>
+          <label class="btn" for="fileMap">上傳對照表（JSON/CSV）</label>
+          <input id="fileMap" type="file" accept=".json,.csv" style="display:none" />
+        </div>
+        <div class="row">
+          <span class="meta">已載入對照筆數：<span id="countMap">0</span></span>
+        </div>
+      </div>
+      <div class="dropzone" id="dropzone">也可以拖放 JSON/CSV 到這裡</div>
+      <details style="margin-top:10px;">
+        <summary>CSV 格式說明</summary>
+        <div class="meta" style="margin-top:6px">
+          <div>欄位：<span class="mono">k,v</span>。若同音多個譯音，用 <span class="mono">|</span> 分隔，例如：<span class="mono">きゃ,騎|另譯</span>。</div>
+          <div>若需要在譯音前加「[」，請直接寫在值裡（例：<span class="mono">ぎゃ,[舉</span>）。</div>
+        </div>
+      </details>
+    </section>
+
+    <div class="footer">
+      製作：YourName ｜ 本工具可離線使用（首次載入後）
+    </div>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
